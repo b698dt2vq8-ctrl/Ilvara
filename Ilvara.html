@@ -553,7 +553,7 @@ h1 { font-size: 3.2rem; }
 ```
 <div class="viewport" id="viewport">
   <div class="world" id="world">
-    <img class="basemap" src="assets/mapa-ilvara.jpg" alt="" draggable="false">
+    <img class="basemap" src="IMG_8571.jpeg" alt="" draggable="false">
     <svg class="overlay" id="overlay" viewBox="0 0 1024 1536" role="group" aria-label="Territorios de las trece casas"></svg>
   </div>
 </div>
@@ -619,7 +619,7 @@ h1 { font-size: 3.2rem; }
 
 <!-- Geometría de los territorios (generada a partir del mapa) -->
 
-<script src="assets/regiones.js"></script>
+<script src="regiones.js"></script>
 
 <script>
 /* ==========================================================
@@ -771,7 +771,7 @@ const Mapa = (() => {
   /* ---------- Construcción del SVG ---------- */
   function construir() {
     if (typeof TERRITORIOS === 'undefined') {
-      hint.textContent = 'No se encontró assets/regiones.js. Deja la carpeta assets junto a ilvara.html.';
+      hint.textContent = 'No se encontró regiones.js. Debe estar en la misma carpeta que Ilvara.html.';
       return false;
     }
 
