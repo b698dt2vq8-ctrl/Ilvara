@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ilvara</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f171b;
+    --bg-raised: #152228;
+    --sea: #04202f;
+    --river: #7fa6b2;
+    --river-deep: #3b6272;
+    --bone: #d8d3c4;
+    --muted: #8b9a9f;
+    --line: #2b3b42;
+    --serif-display: "Cormorant Garamond", "Palatino Linotype", Georgia, serif;
+    --serif-body: "EB Garamond", Georgia, "Times New Roman", serif;
+  }
+
+- { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+
+body {
+background: var(–bg);
+color: var(–bone);
+font-family: var(–serif-body);
+font-size: 1.125rem;
+line-height: 1.6;
+overflow: hidden;
+}
+
+/* ––––– Pantallas ––––– */
+.screen {
+position: fixed;
+inset: 0;
+display: none;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+padding: 2rem 1.5rem;
+text-align: center;
+}
+.screen.active { display: flex; }
+
+.screen.simple h2 {
+font-family: var(–serif-display);
+font-weight: 300;
+font-size: clamp(2rem, 8vw, 3rem);
+letter-spacing: .06em;
+margin-bottom: 1rem;
+}
+.screen.simple p { max-width: 28rem; color: var(–muted); margin-bottom: 2rem; }
+.screen.simple .btn { min-width: 12rem; }
+
+/* ––––– Botones ––––– */
+.btn {
+font-family: var(–serif-display);
+font-weight: 500;
+font-size: 1.45rem;
+letter-spacing: .06em;
+color: var(–bone);
+background: var(–bg);
+border: 1px solid var(–line);
+padding: .8rem 1.25rem;
+cursor: pointer;
+position: relative;
+transition: border-color .2s ease, color .2s ease, background-color .2s ease;
+}
+.btn::before {
+content: “”;
+position: absolute;
+left: 0; top: -1px; bottom: -1px;
+width: 3px;
+background: var(–river);
+transform: scaleY(0);
+transition: transform .22s ease;
+}
+.btn:hover, .btn:focus-visible {
+border-color: var(–river-deep);
+color: #fff;
+background: var(–bg-raised);
+}
+.btn:hover::before, .btn:focus-visible::before { transform: scaleY(1); }
+.btn:focus-visible { outline: 2px solid var(–river); outline-offset: 3px; }
+.btn:active { background: var(–line); }
+.btn.quiet { font-size: 1.15rem; padding: .6rem 1.1rem; color: var(–muted); }
+
+/* ====================================================== */
+/* INICIO                                                  */
+/* ====================================================== */
+.river {
+position: absolute;
+inset: 0;
+width: 100%;
+height: 100%;
+pointer-events: none;
+}
+.river path {
+fill: none;
+stroke: url(#riverFade);
+stroke-linecap: round;
+stroke-dasharray: 1;
+stroke-dashoffset: 0;
+}
+.river .tributary { stroke-width: 3; }
+.river .trunk { stroke-width: 5; }
+
+@media (prefers-reduced-motion: no-preference) {
+.river path {
+stroke-dashoffset: 1;
+animation: flow 3.6s cubic-bezier(.45, .05, .25, 1) .2s forwards;
+}
+.river .trunk { animation-delay: 1.1s; animation-duration: 3.2s; }
+}
+@keyframes flow { to { stroke-dashoffset: 0; } }
+
+.home-content {
+position: relative;
+z-index: 1;
+display: flex;
+flex-direction: column;
+align-items: center;
+width: 100%;
+max-width: 22rem;
+}
+
+h1 {
+font-family: var(–serif-display);
+font-weight: 300;
+font-size: clamp(3.75rem, 17vw, 6.5rem);
+letter-spacing: .14em;
+padding-left: .14em;
+line-height: 1;
+color: var(–bone);
+}
+
+.tagline {
+margin-top: .9rem;
+color: var(–muted);
+font-style: italic;
+font-size: 1.1rem;
+}
+
+.menu {
+margin-top: clamp(2rem, 7vh, 3.5rem);
+display: flex;
+flex-direction: column;
+gap: .85rem;
+width: 100%;
+}
+
+.houses {
+position: absolute;
+bottom: 1.6rem;
+left: 0; right: 0;
+display: flex;
+justify-content: center;
+gap: .55rem;
+z-index: 1;
+}
+.houses span {
+width: 9px;
+height: 9px;
+border-radius: 50%;
+background: var(–c);
+opacity: .85;
+}
+
+/* ====================================================== */
+/* MAPA                                                    */
+/* ====================================================== */
+.map-screen { padding: 0; display: none; text-align: left; background: var(–sea); }
+.map-screen.active { display: block; }
+
+.viewport {
+position: absolute;
+inset: 0;
+overflow: hidden;
+touch-action: none;
+cursor: grab;
+user-select: none;
+-webkit-user-select: none;
+background: radial-gradient(ellipse at 50% 45%, #06283a 0%, #04202f 42%, #030f17 100%);
+}
+.viewport.dragging { cursor: grabbing; }
+/* viñeta: el mapa se funde con la oscuridad en lugar de verse como un cuadro */
+.viewport::after {
+content: “”;
+position: absolute;
+inset: 0;
+pointer-events: none;
+background: radial-gradient(ellipse at 50% 48%, transparent 52%, rgba(2, 8, 12, .72) 100%);
+}
+
+.world {
+position: absolute;
+left: 0; top: 0;
+width: 1024px;
+height: 1536px;
+transform-origin: 0 0;
+–s: 1;
+}
+.world.animating { transition: transform .75s cubic-bezier(.3, .1, .2, 1); }
+
+.basemap {
+position: absolute;
+inset: 0;
+width: 100%;
+height: 100%;
+display: block;
+pointer-events: none;
+-webkit-user-drag: none;
+/* los bordes del mar se disuelven en el fondo */
+-webkit-mask-image:
+linear-gradient(to right, transparent, #000 5%, #000 95%, transparent),
+linear-gradient(to bottom, transparent, #000 3%, #000 97%, transparent);
+-webkit-mask-composite: source-in;
+mask-image:
+linear-gradient(to right, transparent, #000 5%, #000 95%, transparent),
+linear-gradient(to bottom, transparent, #000 3%, #000 97%, transparent);
+mask-composite: intersect;
+}
+
+.overlay {
+position: absolute;
+inset: 0;
+width: 100%;
+height: 100%;
+overflow: visible;
+}
+
+.dim { fill: #04090d; opacity: 0; transition: opacity .55s ease; pointer-events: none; }
+.has-selection .dim { opacity: .7; }
+
+.territory { outline: none; cursor: pointer; }
+.territory .wash { fill: var(–luz); opacity: 0; transition: opacity .3s ease; }
+.territory .glow,
+.territory .edge {
+fill: none;
+stroke: var(–luz);
+stroke-linejoin: round;
+stroke-linecap: round;
+opacity: 0;
+pointer-events: none;
+}
+.territory .edge { stroke-width: calc(2px / var(–s)); stroke-dasharray: 1; stroke-dashoffset: 0; }
+.territory .glow { stroke-width: calc(8px / var(–s)); filter: url(#glow); }
+.territory .hit { fill: transparent; pointer-events: all; }
+
+@media (hover: hover) {
+.has-selection .territory:not(.selected):hover .wash { opacity: .1; }
+.territory:hover .wash { opacity: .17; }
+}
+.territory:focus-visible .edge { opacity: 1; }
+.territory.selected .wash { opacity: .26; }
+.territory.selected .edge { opacity: 1; animation: draw 1.15s ease-out both; }
+.territory.selected .glow { opacity: .8; animation: fadein .9s .25s ease-out both; }
+@keyframes draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes fadein { from { opacity: 0; } }
+
+/* Etiquetas: mantienen su tamaño en pantalla al hacer zoom */
+.label {
+font-family: var(–serif-display);
+font-weight: 500;
+font-size: calc(15px / var(–s));
+letter-spacing: .06em;
+fill: #f1ecdc;
+text-anchor: middle;
+dominant-baseline: middle;
+paint-order: stroke;
+stroke: #050b0e;
+stroke-width: calc(3.5px / var(–s));
+stroke-linejoin: round;
+opacity: .95;
+transition: opacity .4s ease;
+pointer-events: none;
+}
+.has-selection .label { opacity: .28; }
+.has-selection .label.on { opacity: 1; }
+
+.place {
+font-family: var(–serif-body);
+font-style: italic;
+font-size: calc(13px / var(–s));
+letter-spacing: .22em;
+fill: #a9c9d4;
+opacity: .6;
+text-anchor: middle;
+dominant-baseline: middle;
+pointer-events: none;
+}
+.place.mountain { fill: #ecdcbc; opacity: .7; }
+.has-selection .place { opacity: .25; }
+
+/* Controles del mapa */
+.map-back {
+position: absolute;
+top: max(1rem, env(safe-area-inset-top));
+left: 1rem;
+z-index: 4;
+font-size: 1.15rem;
+padding: .5rem 1.1rem;
+background: rgba(15, 23, 27, .82);
+backdrop-filter: blur(4px);
+-webkit-backdrop-filter: blur(4px);
+}
+
+.zoom {
+position: absolute;
+left: 1rem;
+bottom: max(1.2rem, env(safe-area-inset-bottom));
+z-index: 4;
+display: flex;
+flex-direction: column;
+gap: .5rem;
+}
+.zoom .btn {
+width: 2.75rem;
+height: 2.75rem;
+padding: 0;
+font-size: 1.5rem;
+line-height: 1;
+background: rgba(15, 23, 27, .82);
+backdrop-filter: blur(4px);
+-webkit-backdrop-filter: blur(4px);
+}
+
+.hint {
+position: absolute;
+left: 50%;
+bottom: max(1.4rem, env(safe-area-inset-bottom));
+transform: translateX(-50%);
+z-index: 3;
+color: var(–bone);
+font-style: italic;
+font-size: 1.05rem;
+text-align: center;
+width: min(80vw, 24rem);
+text-shadow: 0 1px 6px #000, 0 0 12px #000;
+pointer-events: none;
+transition: opacity .4s ease;
+}
+.map-screen.has-picked .hint { opacity: 0; }
+
+/* Panel de información */
+.panel {
+position: absolute;
+z-index: 5;
+left: 0; right: 0; bottom: 0;
+max-height: 52vh;
+overflow-y: auto;
+background: rgba(12, 22, 27, .95);
+backdrop-filter: blur(8px);
+-webkit-backdrop-filter: blur(8px);
+border-top: 1px solid var(–river-deep);
+padding: 1.1rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom));
+transform: translateY(105%);
+transition: transform .4s cubic-bezier(.3, .1, .2, 1);
+}
+.panel.open { transform: none; }
+
+.panel-close {
+position: absolute;
+top: .7rem;
+right: .8rem;
+font-family: var(–serif-body);
+font-size: 1rem;
+color: var(–muted);
+background: none;
+border: 0;
+padding: .35rem .5rem;
+cursor: pointer;
+}
+.panel-close:hover { color: var(–bone); }
+.panel-close:focus-visible { outline: 2px solid var(–river); outline-offset: 2px; }
+
+.swatches { display: flex; gap: .4rem; margin-bottom: .7rem; }
+.swatches i {
+display: block;
+width: 1.5rem;
+height: .5rem;
+border: 1px solid rgba(255, 255, 255, .2);
+}
+
+.panel h2 {
+font-family: var(–serif-display);
+font-weight: 500;
+font-size: 2rem;
+letter-spacing: .04em;
+line-height: 1.15;
+padding-right: 4rem;
+}
+.p-region { color: var(–muted); font-size: 1rem; margin-top: .15rem; }
+.p-lema { font-style: italic; font-size: 1.2rem; margin: .9rem 0 1rem; }
+
+.facts { display: grid; grid-template-columns: 1fr; gap: .65rem; }
+.facts dt { color: var(–muted); font-style: italic; font-size: .95rem; line-height: 1.2; }
+.facts dd { font-size: 1.05rem; line-height: 1.4; }
+
+@media (min-width: 760px) {
+.panel {
+left: auto;
+top: 0;
+width: 24rem;
+max-height: none;
+border-top: 0;
+border-left: 1px solid var(–river-deep);
+padding: 4rem 1.75rem 2rem;
+transform: translateX(105%);
+}
+.panel.open { transform: none; }
+.panel h2 { font-size: 2.4rem; }
+.facts { grid-template-columns: 6.5rem 1fr; gap: .8rem 1rem; }
+}
+@media (max-width: 759px) {
+.map-screen.panel-open .zoom { display: none; }
+}
+
+/* ====================================================== */
+/* DIÁLOGOS                                                */
+/* ====================================================== */
+dialog {
+margin: auto;
+width: min(92vw, 26rem);
+background: var(–bg-raised);
+color: var(–bone);
+border: 1px solid var(–river-deep);
+padding: 1.75rem 1.5rem 1.5rem;
+}
+dialog::backdrop { background: rgba(5, 9, 11, .78); }
+dialog h2 {
+font-family: var(–serif-display);
+font-weight: 500;
+font-size: 1.7rem;
+letter-spacing: .04em;
+margin-bottom: 1.1rem;
+}
+dialog p { color: var(–muted); margin-bottom: 1.4rem; }
+.dialog-actions { display: flex; gap: .75rem; flex-wrap: wrap; }
+.dialog-actions .btn { flex: 1 1 8rem; font-size: 1.2rem; padding: .6rem 1rem; }
+
+.option {
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 1rem;
+padding: .7rem 0;
+border-bottom: 1px solid var(–line);
+}
+.option:last-of-type { border-bottom: 0; margin-bottom: .6rem; }
+.option label { cursor: pointer; text-align: left; }
+.option .value { color: var(–muted); }
+
+.switch {
+appearance: none;
+-webkit-appearance: none;
+width: 2.6rem;
+height: 1.4rem;
+border: 1px solid var(–river-deep);
+background: var(–bg);
+position: relative;
+cursor: pointer;
+flex: none;
+transition: background-color .2s ease;
+}
+.switch::after {
+content: “”;
+position: absolute;
+top: 2px; left: 2px;
+width: calc(1.4rem - 6px);
+height: calc(1.4rem - 6px);
+background: var(–muted);
+transition: transform .2s ease, background-color .2s ease;
+}
+.switch:checked { background: var(–river-deep); }
+.switch:checked::after { transform: translateX(1.2rem); background: var(–bone); }
+.switch:focus-visible { outline: 2px solid var(–river); outline-offset: 3px; }
+
+@media (max-height: 560px) {
+h1 { font-size: 3.2rem; }
+.menu { margin-top: 1.25rem; gap: .5rem; }
+.btn { padding: .5rem 1rem; font-size: 1.25rem; }
+.houses { bottom: .7rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+.world.animating, .panel, .dim, .territory .wash, .label { transition: none; }
+.territory.selected .edge, .territory.selected .glow { animation: none; }
+}
+</style>
+
+</head>
+<body>
+
+  <!-- ===== Pantalla de inicio ===== -->
+
+  <main id="screen-home" class="screen active" aria-labelledby="game-title">
+    <svg class="river" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="riverFade" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#7fa6b2" stop-opacity=".0"/>
+          <stop offset=".12" stop-color="#7fa6b2" stop-opacity=".55"/>
+          <stop offset=".6" stop-color="#5f8a99" stop-opacity=".35"/>
+          <stop offset="1" stop-color="#3b6272" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path class="tributary" pathLength="1" d="M 40 -20 C 90 120, 170 170, 200 250"/>
+      <path class="tributary" pathLength="1" d="M 360 -20 C 310 120, 230 170, 200 250"/>
+      <path class="trunk" pathLength="1" d="M 200 250 C 215 360, 170 450, 195 560 C 215 650, 190 720, 200 820"/>
+    </svg>
+
+```
+<div class="home-content">
+  <h1 id="game-title">Ilvara</h1>
+  <p class="tagline">Trece casas. Un río que se seca.</p>
+
+  <nav class="menu" aria-label="Menú principal">
+    <button class="btn" id="btn-play" type="button">Jugar</button>
+    <button class="btn" id="btn-options" type="button">Opciones</button>
+    <button class="btn quiet" id="btn-exit" type="button">Salir</button>
+  </nav>
+</div>
+
+<div class="houses" role="img" aria-label="Las trece casas">
+  <span style="--c:#9fd3e6" title="Nevar"></span>
+  <span style="--c:#e0742c" title="Dorn"></span>
+  <span style="--c:#3f7a4a" title="Robel"></span>
+  <span style="--c:#e3c04d" title="Solán"></span>
+  <span style="--c:#8a4fb8" title="Aurel"></span>
+  <span style="--c:#5f7d3c" title="Hiedra"></span>
+  <span style="--c:#2f5aa8" title="Maren"></span>
+  <span style="--c:#b5472e" title="Zafir"></span>
+  <span style="--c:#c4613f" title="Tamar"></span>
+  <span style="--c:#1fa36b" title="Yara"></span>
+  <span style="--c:#8c2446" title="Vidal"></span>
+  <span style="--c:#8fa3b5" title="Bruma"></span>
+  <span style="--c:#f08a8a" title="Coral"></span>
+</div>
+```
+
+  </main>
+
+  <!-- ===== Pantalla del mapa ===== -->
+
+  <section id="screen-map" class="screen map-screen" aria-label="Mapa del continente">
+    <button class="btn map-back" id="btn-back-map" type="button">Inicio</button>
+
+```
+<div class="viewport" id="viewport">
+  <div class="world" id="world">
+    <img class="basemap" src="assets/mapa-ilvara.jpg" alt="" draggable="false">
+    <svg class="overlay" id="overlay" viewBox="0 0 1024 1536" role="group" aria-label="Territorios de las trece casas"></svg>
+  </div>
+</div>
+
+<div class="zoom" role="group" aria-label="Zoom">
+  <button class="btn" id="btn-zoom-in" type="button" aria-label="Acercar">+</button>
+  <button class="btn" id="btn-zoom-out" type="button" aria-label="Alejar">&minus;</button>
+</div>
+
+<p class="hint" id="map-hint">Elige una casa en el mapa para ver su territorio.</p>
+
+<aside class="panel" id="panel" aria-labelledby="p-name" aria-hidden="true">
+  <button class="panel-close" id="panel-close" type="button">Cerrar</button>
+  <div class="swatches" id="p-swatches"></div>
+  <h2 id="p-name"></h2>
+  <p class="p-region" id="p-region"></p>
+  <p class="p-lema" id="p-lema"></p>
+  <dl class="facts" id="p-facts"></dl>
+</aside>
+```
+
+  </section>
+
+  <!-- ===== Pantalla de despedida ===== -->
+
+  <section id="screen-bye" class="screen simple" aria-labelledby="bye-title">
+    <h2 id="bye-title">Hasta pronto</h2>
+    <p>Puedes cerrar esta pestaña para salir de Ilvara.</p>
+    <button class="btn" id="btn-back-bye" type="button">Volver al inicio</button>
+  </section>
+
+  <!-- ===== Opciones ===== -->
+
+  <dialog id="dlg-options" aria-labelledby="options-title">
+    <h2 id="options-title">Opciones</h2>
+    <div class="option">
+      <label for="opt-music">Música</label>
+      <input class="switch" type="checkbox" id="opt-music" checked>
+    </div>
+    <div class="option">
+      <label for="opt-sfx">Efectos de sonido</label>
+      <input class="switch" type="checkbox" id="opt-sfx" checked>
+    </div>
+    <div class="option">
+      <span>Idioma</span>
+      <span class="value">Español</span>
+    </div>
+    <div class="dialog-actions">
+      <button class="btn" id="btn-options-close" type="button">Cerrar</button>
+    </div>
+  </dialog>
+
+  <!-- ===== Confirmar salida ===== -->
+
+  <dialog id="dlg-exit" aria-labelledby="exit-title">
+    <h2 id="exit-title">¿Salir de Ilvara?</h2>
+    <p>Volverás a la pestaña anterior del navegador.</p>
+    <div class="dialog-actions">
+      <button class="btn" id="btn-exit-confirm" type="button">Salir</button>
+      <button class="btn" id="btn-exit-cancel" type="button">Seguir en Ilvara</button>
+    </div>
+  </dialog>
+
+<!-- Geometría de los territorios (generada a partir del mapa) -->
+
+<script src="assets/regiones.js"></script>
+
+<script>
+/* ==========================================================
+   DATOS DE LAS CASAS (identidad y función económica)
+   ========================================================== */
+const CASAS = [
+  { id: 1, nombre: 'Nevar', region: 'Glaciar y Tundra',
+    lema: 'El invierno nos hizo.', emblema: 'Oso polar blanco',
+    colores: ['#9fd3e6', '#c7ccd4'], coloresNombre: 'Azul hielo y plata', luz: '#bfe9f7',
+    sede: 'Cumbrehielo', gobierna: 'El Señor o Señora de las Hogueras',
+    produce: 'Pieles, marfil de morsa y bloques de hielo', depende: 'Grano de Solán' },
+  { id: 2, nombre: 'Dorn', region: 'Cordillera del Norte',
+    lema: 'Cavamos hondo, caemos de pie.', emblema: 'Pico dorado sobre montaña negra',
+    colores: ['#e0742c', '#4a4d52'], coloresNombre: 'Gris carbón y naranja brasa', luz: '#ff9a4d',
+    sede: 'Hondoforja', gobierna: 'El Maestro de Vetas',
+    produce: 'Hierro, carbón, plata, cobre y gemas', depende: 'Grano de Solán, vino y ganado de Vidal, madera de Robel' },
+  { id: 3, nombre: 'Robel', region: 'Bosques del Noroeste',
+    lema: 'El bosque lo ve todo.', emblema: 'Ciervo con astas en forma de ramas',
+    colores: ['#3f7a4a', '#6b4a2f'], coloresNombre: 'Verde pino y marrón corteza', luz: '#7fd18a',
+    sede: 'Roblealto', gobierna: 'El Montero Mayor',
+    produce: 'Madera, carbón, tintes, muebles y arcos', depende: 'Solo grano de respaldo, de Solán' },
+  { id: 4, nombre: 'Solán', region: 'Llanuras Centrales',
+    lema: 'El hambre no espera la cosecha.', emblema: 'Gavilla de trigo bajo un sol',
+    colores: ['#e3c04d', '#f1e6c4'], coloresNombre: 'Amarillo trigo y crema', luz: '#ffe27a',
+    sede: 'Campodorado', gobierna: 'El Señor de las Cosechas, con la Junta de Graneros',
+    produce: 'Trigo, cebada, cerveza, lana, carne y los mejores caballos', depende: 'Madera de Robel, sal de Maren y hierro de Dorn' },
+  { id: 5, nombre: 'Aurel', region: 'La Confluencia',
+    lema: 'Dos aguas, un solo trono.', emblema: 'Corona sobre dos ríos que se unen en Y',
+    colores: ['#8a4fb8', '#d4af37'], coloresNombre: 'Púrpura y oro', luz: '#c99bff',
+    sede: 'Dosaguas', gobierna: 'El Soberano de las Dos Aguas, con el Consejo de las Trece Voces',
+    produce: 'Casi nada: vive de la moneda, los peajes del río y la burocracia', depende: 'De todas las demás casas' },
+  { id: 6, nombre: 'Hiedra', region: 'Delta y Pantanos',
+    lema: 'El agua guarda secretos.', emblema: 'Serpiente enroscada en hiedra',
+    colores: ['#5f7d3c', '#12201a'], coloresNombre: 'Verde ciénaga y negro', luz: '#b4e36b',
+    sede: 'Cienaguas', gobierna: 'La Madre del Delta',
+    produce: 'Medicinas y venenos, anguilas, arroz, flores y raíces', depende: 'De nada vital; solo compra metal y vidrio' },
+  { id: 7, nombre: 'Maren', region: 'Costa Oeste',
+    lema: 'El mar paga a quien lo cruza.', emblema: 'Ancla con velas',
+    colores: ['#2f5aa8', '#b5a642'], coloresNombre: 'Azul marino y latón', luz: '#6fa4ff',
+    sede: 'Altamarea', gobierna: 'El Gran Almirante',
+    produce: 'La mayor flota del imperio, pescado, sal y seguros marítimos', depende: 'Grano de Solán y mástiles de Robel' },
+  { id: 8, nombre: 'Zafir', region: 'Desierto',
+    lema: 'La sed enseña.', emblema: 'Escorpión',
+    colores: ['#b5472e', '#c9922e'], coloresNombre: 'Rojo arena y ocre', luz: '#ff8a5c',
+    sede: 'Espejal', gobierna: 'El Gran Guía',
+    produce: 'Sal de salar, vidrio soplado, escoltas y mercenarios', depende: 'Agua de Tamar; compra también grano y metal' },
+  { id: 9, nombre: 'Tamar', region: 'Mesetas y Oasis',
+    lema: 'Cada gota tiene dueño.', emblema: 'Palmera sobre una gota de agua',
+    colores: ['#c4613f', '#2fb5b0'], coloresNombre: 'Terracota y turquesa', luz: '#4fe0d8',
+    sede: 'Fuenteroja', gobierna: 'La Guardiana de las Fuentes',
+    produce: 'Agua, lana gruesa, tintes, algodón, lino y dátiles', depende: 'Grano de Solán y metal de Dorn' },
+  { id: 10, nombre: 'Yara', region: 'Selva y Costa Sur',
+    lema: 'La selva no olvida.', emblema: 'Jaguar',
+    colores: ['#1fa36b', '#c2399a'], coloresNombre: 'Verde esmeralda y fucsia orquídea', luz: '#ff5fd0',
+    sede: 'Ceibal', gobierna: 'El Jaguar',
+    produce: 'Especias, cacao, vainilla, frutas tropicales y maderas finas', depende: 'Los prácticos de Hiedra para sacar mercancía, y Coral y Maren para venderla' },
+  { id: 11, nombre: 'Vidal', region: 'Valles del Este',
+    lema: 'Fuimos corona, seremos memoria.', emblema: 'Racimo de uvas dentro de una copa',
+    colores: ['#8c2446', '#e6d3a3'], coloresNombre: 'Burdeos y champán', luz: '#ff6b94',
+    sede: 'Valdeoro', gobierna: 'El Gran Mecenas',
+    produce: 'Vino, joyería, cerámica, tapices, instrumentos y libros ilustrados', depende: 'Hielo de Nevar, especias de Yara, medicinas de Hiedra y perlas de Coral' },
+  { id: 12, nombre: 'Bruma', region: 'Archipiélago del Norte',
+    lema: 'Más allá de la niebla.', emblema: 'Ballena entre la niebla',
+    colores: ['#8fa3b5', '#eef2f5'], coloresNombre: 'Gris azulado y blanco', luz: '#dbe7f2',
+    sede: 'Puertoniebla', gobierna: 'El Alto Capitán',
+    produce: 'Aceite de ballena, ámbar gris, pescado ahumado y corsarios', depende: 'Madera de Robel y grano que llega por Maren' },
+  { id: 13, nombre: 'Coral', region: 'Archipiélago del Sur',
+    lema: 'El mar nos da todo.', emblema: 'Concha con una perla',
+    colores: ['#f08a8a', '#efe6dc'], coloresNombre: 'Rosa coral y nácar', luz: '#ffb3b3',
+    sede: 'Perlamar', gobierna: 'La Timonela del Año, con el Círculo de Mareas',
+    produce: 'Perlas, coral, púrpura, pescado y cocos', depende: 'Compra grano, metal y madera' }
+];
+const CASA = Object.fromEntries(CASAS.map(c => [c.id, c]));
+
+/* ==========================================================
+   PANTALLAS Y MENÚ
+   ========================================================== */
+const settings = { music: true, sfx: true };
+
+const screens = {
+  home: document.getElementById('screen-home'),
+  map: document.getElementById('screen-map'),
+  bye: document.getElementById('screen-bye')
+};
+
+function showScreen(name) {
+  Object.entries(screens).forEach(([key, el]) => el.classList.toggle('active', key === name));
+  const focusTarget = screens[name].querySelector('button');
+  if (focusTarget) focusTarget.focus({ preventScroll: true });
+}
+
+const dlgOptions = document.getElementById('dlg-options');
+const dlgExit = document.getElementById('dlg-exit');
+
+document.getElementById('btn-play').addEventListener('click', () => {
+  showScreen('map');
+  Mapa.abrir();
+});
+document.getElementById('btn-back-map').addEventListener('click', () => {
+  Mapa.cerrar();
+  showScreen('home');
+});
+document.getElementById('btn-back-bye').addEventListener('click', () => showScreen('home'));
+
+document.getElementById('btn-options').addEventListener('click', () => dlgOptions.showModal());
+document.getElementById('btn-options-close').addEventListener('click', () => dlgOptions.close());
+document.getElementById('opt-music').addEventListener('change', e => { settings.music = e.target.checked; });
+document.getElementById('opt-sfx').addEventListener('change', e => { settings.sfx = e.target.checked; });
+
+document.getElementById('btn-exit').addEventListener('click', () => dlgExit.showModal());
+document.getElementById('btn-exit-cancel').addEventListener('click', () => dlgExit.close());
+document.getElementById('btn-exit-confirm').addEventListener('click', () => {
+  dlgExit.close();
+  // Los navegadores solo dejan cerrar pestañas abiertas por el propio juego;
+  // si no se cierra, mostramos la pantalla de despedida.
+  window.close();
+  setTimeout(() => showScreen('bye'), 150);
+});
+
+[dlgOptions, dlgExit].forEach(dlg => {
+  dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+});
+
+/* ==========================================================
+   MAPA INTERACTIVO
+   ========================================================== */
+const Mapa = (() => {
+  const W = 1024, H = 1536;
+  const MAX_SCALE = 3.2;
+  const PANEL_W = 384;        // ancho del panel lateral en pantallas grandes
+  const BREAKPOINT = 760;
+
+  const screen = document.getElementById('screen-map');
+  const viewport = document.getElementById('viewport');
+  const world = document.getElementById('world');
+  const svg = document.getElementById('overlay');
+  const panel = document.getElementById('panel');
+  const hint = document.getElementById('map-hint');
+
+  const view = { x: 0, y: 0, s: 1 };
+  let minScale = 0.3;
+  let built = false;
+  let selectedId = null;
+  let zoomedIn = false;
+
+  const clamp = (v, a, b) => Math.min(Math.max(v, a), b);
+  const esMovil = () => viewport.clientWidth < BREAKPOINT;
+
+  /* ---------- Construcción del SVG ---------- */
+  function construir() {
+    if (typeof TERRITORIOS === 'undefined') {
+      hint.textContent = 'No se encontró assets/regiones.js. Deja la carpeta assets junto a ilvara.html.';
+      return false;
+    }
+
+    // Las áreas de toque de los archipiélagos van debajo para que la tierra firme tenga prioridad.
+    const orden = [...TERRITORIOS].sort((a, b) => (b.hit ? 1 : 0) - (a.hit ? 1 : 0));
+
+    const territorios = orden.map(t => {
+      const c = CASA[t.id];
+      return `
+      <g class="territory" data-id="${t.id}" tabindex="0" role="button"
+         aria-label="Casa ${c.nombre}, ${c.region}" style="--luz:${c.luz}">
+        <path class="wash" d="${t.d}" fill-rule="evenodd"/>
+        <path class="glow" d="${t.d}" pathLength="1"/>
+        <path class="edge" d="${t.d}" pathLength="1"/>
+        <path class="hit" d="${t.hit || t.d}" fill-rule="evenodd"/>
+      </g>`;
+    }).join('');
+
+    const etiquetas = TERRITORIOS.map(t =>
+      `<text class="label" data-id="${t.id}" x="${t.anchor[0]}" y="${t.anchor[1]}">${CASA[t.id].nombre}</text>`
+    ).join('');
+
+    // Nombres de mares y cordilleras (solo ambientación)
+    const lugares = `
+      <text class="place" x="52" y="740" transform="rotate(-90 52 740)">Mar Occidental</text>
+      <text class="place" x="975" y="800" transform="rotate(90 975 800)">Mar Oriental</text>
+      <text class="place" x="475" y="1468">Mar del Sur</text>
+      <text class="place mountain" x="268" y="905" transform="rotate(-62 268 905)">Cordillera Central</text>`;
+
+    svg.innerHTML = `
+      <defs>
+        <filter id="soft" filterUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}">
+          <feGaussianBlur stdDeviation="3"/>
+        </filter>
+        <filter id="glow" filterUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}">
+          <feGaussianBlur stdDeviation="5"/>
+        </filter>
+        <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}">
+          <rect width="${W}" height="${H}" fill="#fff"/>
+          <path id="cut-shape" d="" fill="#000" fill-rule="evenodd" filter="url(#soft)"/>
+        </mask>
+      </defs>
+      <rect class="dim" width="${W}" height="${H}" mask="url(#cut)"/>
+      ${territorios}
+      <g>${lugares}</g>
+      <g>${etiquetas}</g>`;
+
+    svg.querySelectorAll('.territory').forEach(g => {
+      g.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          seleccionar(Number(g.dataset.id));
+        }
+      });
+    });
+    return true;
+  }
+
+  /* ---------- Vista (desplazamiento y zoom) ---------- */
+  function aplicar() {
+    world.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.s})`;
+    world.style.setProperty('--s', view.s.toFixed(4));
+  }
+
+  function limitar() {
+    const vw = viewport.clientWidth, vh = viewport.clientHeight;
+    const ww = W * view.s, wh = H * view.s, m = 60;
+    view.x = ww <= vw ? (vw - ww) / 2 : clamp(view.x, vw - ww - m, m);
+    view.y = wh <= vh ? (vh - wh) / 2 : clamp(view.y, vh - wh - m, m);
+  }
+
+  function mover(animar) {
+    if (animar) {
+      world.classList.add('animating');
+      clearTimeout(mover.t);
+      mover.t = setTimeout(() => world.classList.remove('animating'), 800);
+    } else {
+      world.classList.remove('animating');
+    }
+    limitar();
+    aplicar();
+  }
+
+  function calcularMinimo() {
+    minScale = Math.min(viewport.clientWidth / W, viewport.clientHeight / H);
+  }
+
+  function verTodo(animar) {
+    calcularMinimo();
+    view.s = minScale;
+    view.x = 0; view.y = 0;
+    zoomedIn = false;
+    mover(animar);
+  }
+
+  function zoomEn(cx, cy, nuevaEscala) {
+    const s = clamp(nuevaEscala, minScale, MAX_SCALE);
+    const k = s / view.s;
+    view.x = cx - (cx - view.x) * k;
+    view.y = cy - (cy - view.y) * k;
+    view.s = s;
+    zoomedIn = view.s > minScale * 1.05;
+  }
+
+  function enfocar(id, animar) {
+    const t = TERRITORIOS.find(r => r.id === id);
+    const [x0, y0, x1, y1] = t.bbox;
+    const bw = x1 - x0, bh = y1 - y0;
+    const vw = viewport.clientWidth, vh = viewport.clientHeight;
+    const libreW = esMovil() ? vw : vw - PANEL_W;
+    const libreH = esMovil() ? vh * 0.44 : vh;
+    calcularMinimo();
+    const s = clamp(Math.min(libreW / (bw * 1.4), libreH / (bh * 1.4)), minScale, 2.6);
+    view.s = s;
+    view.x = libreW / 2 - ((x0 + x1) / 2) * s;
+    view.y = libreH / 2 - ((y0 + y1) / 2) * s;
+    zoomedIn = true;
+    mover(animar);
+  }
+
+  /* ---------- Selección ---------- */
+  function rellenarPanel(c) {
+    document.getElementById('p-swatches').innerHTML =
+      c.colores.map(col => `<i style="background:${col}"></i>`).join('');
+    document.getElementById('p-name').textContent = `Casa ${c.nombre}`;
+    document.getElementById('p-region').textContent = `Región ${c.id}, ${c.region}`;
+    document.getElementById('p-lema').textContent = `“${c.lema}”`;
+    const filas = [
+      ['Sede', c.sede],
+      ['Gobierna', c.gobierna],
+      ['Emblema', c.emblema],
+      ['Colores', c.coloresNombre],
+      ['Produce', c.produce],
+      ['Depende de', c.depende]
+    ];
+    const dl = document.getElementById('p-facts');
+    dl.innerHTML = '';
+    filas.forEach(([k, v]) => {
+      const dt = document.createElement('dt'); dt.textContent = k;
+      const dd = document.createElement('dd'); dd.textContent = v;
+      dl.append(dt, dd);
+    });
+    panel.scrollTop = 0;
+  }
+
+  function abrirPanel(abierto) {
+    panel.classList.toggle('open', abierto);
+    panel.setAttribute('aria-hidden', String(!abierto));
+    panel.inert = !abierto;
+    screen.classList.toggle('panel-open', abierto);
+  }
+
+  function seleccionar(id) {
+    const t = TERRITORIOS.find(r => r.id === id);
+    if (!t) return;
+    selectedId = id;
+    svg.classList.add('has-selection');
+    screen.classList.add('has-picked');
+    svg.querySelectorAll('.territory').forEach(g => g.classList.toggle('selected', Number(g.dataset.id) === id));
+    svg.querySelectorAll('.label').forEach(l => l.classList.toggle('on', Number(l.dataset.id) === id));
+    svg.querySelector('#cut-shape').setAttribute('d', t.d);
+    rellenarPanel(CASA[id]);
+    abrirPanel(true);
+    enfocar(id, true);
+  }
+
+  function limpiarSeleccion(volverAVerTodo = true) {
+    if (selectedId === null) return;
+    selectedId = null;
+    svg.classList.remove('has-selection');
+    svg.querySelectorAll('.territory.selected').forEach(g => g.classList.remove('selected'));
+    svg.querySelectorAll('.label.on').forEach(l => l.classList.remove('on'));
+    abrirPanel(false);
+    if (volverAVerTodo) verTodo(true);
+  }
+
+  /* ---------- Gestos: arrastrar, pellizcar y rueda ---------- */
+  const punteros = new Map();
+  let recorrido = 0;
+  let arrastro = false;
+  let pellizco = null;
+
+  viewport.addEventListener('pointerdown', e => {
+    if (e.button !== undefined && e.button > 0) return;
+    world.classList.remove('animating');
+    punteros.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (punteros.size === 1) { recorrido = 0; arrastro = false; }
+    if (punteros.size === 2) {
+      const [a, b] = [...punteros.values()];
+      pellizco = { dist: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+      arrastro = true;
+    }
+  });
+
+  window.addEventListener('pointermove', e => {
+    const previo = punteros.get(e.pointerId);
+    if (!previo) return;
+    const actual = { x: e.clientX, y: e.clientY };
+
+    if (punteros.size === 1) {
+      const dx = actual.x - previo.x, dy = actual.y - previo.y;
+      recorrido += Math.hypot(dx, dy);
+      if (recorrido > 6) {
+        arrastro = true;
+        viewport.classList.add('dragging');
+        view.x += dx; view.y += dy;
+        limitar(); aplicar();
+      }
+    } else if (punteros.size === 2 && pellizco) {
+      punteros.set(e.pointerId, actual);
+      const [a, b] = [...punteros.values()];
+      const dist = Math.hypot(a.x - b.x, a.y - b.y);
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      view.x += mx - pellizco.mx;
+      view.y += my - pellizco.my;
+      zoomEn(mx, my, view.s * (dist / pellizco.dist));
+      pellizco = { dist, mx, my };
+      limitar(); aplicar();
+    }
+    punteros.set(e.pointerId, actual);
+  });
+
+  function soltar(e) {
+    punteros.delete(e.pointerId);
+    if (punteros.size < 2) pellizco = null;
+    if (punteros.size === 0) {
+      viewport.classList.remove('dragging');
+      setTimeout(() => { arrastro = false; }, 0);
+    }
+  }
+  window.addEventListener('pointerup', soltar);
+  window.addEventListener('pointercancel', soltar);
+
+  viewport.addEventListener('wheel', e => {
+    e.preventDefault();
+    world.classList.remove('animating');
+    zoomEn(e.clientX, e.clientY, view.s * Math.exp(-e.deltaY * 0.0015));
+    limitar(); aplicar();
+  }, { passive: false });
+
+  viewport.addEventListener('click', e => {
+    if (arrastro) return;
+    const g = e.target.closest('.territory');
+    if (g) seleccionar(Number(g.dataset.id));
+    else limpiarSeleccion();
+  });
+
+  /* ---------- Botones ---------- */
+  function zoomBoton(factor) {
+    const cx = viewport.clientWidth / 2, cy = viewport.clientHeight / 2;
+    zoomEn(cx, cy, view.s * factor);
+    mover(true);
+  }
+  document.getElementById('btn-zoom-in').addEventListener('click', () => zoomBoton(1.45));
+  document.getElementById('btn-zoom-out').addEventListener('click', () => zoomBoton(1 / 1.45));
+  document.getElementById('panel-close').addEventListener('click', () => limpiarSeleccion());
+
+  window.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && screen.classList.contains('active') && selectedId !== null && !document.querySelector('dialog[open]')) {
+      limpiarSeleccion();
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    if (!built || !screen.classList.contains('active')) return;
+    if (selectedId !== null) enfocar(selectedId, false);
+    else verTodo(false);
+  });
+
+  /* ---------- API ---------- */
+  return {
+    abrir() {
+      if (!built) built = construir();
+      if (!built) return;
+      limpiarSeleccion(false);
+      svg.classList.remove('has-selection');
+      screen.classList.remove('has-picked');
+      abrirPanel(false);
+      verTodo(false);
+    },
+    cerrar() {
+      limpiarSeleccion(false);
+      abrirPanel(false);
+    }
+  };
+})();
+</script>
+
+</body>
+</html>
